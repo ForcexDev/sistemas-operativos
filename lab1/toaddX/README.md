@@ -1,64 +1,72 @@
-# 🚀 Guía de Instalación y Uso (Linux)
+# 🐸 toaddX — Process Manager
 
-Sigue estos pasos para instalar y ejecutar **toaddX** en tu entorno Linux.
+**toaddX** is a lightweight process manager for Linux. It manages, monitors, and controls processes from the command line.
 
-## 1. Instalación desde GitHub
-
-Desde tu terminal de Linux, ejecuta los siguientes comandos:
+## Quick Install
 
 ```bash
-# Clonar el repositorio
-git clone [URL_DEL_REPOSITORIO]
-
-# Entrar a la carpeta del proyecto
+git clone <URL_DEL_REPOSITORIO>
 cd sistemas-operativos/lab1/toaddX
-
-# Compilar el sistema completo (Daemon, CLI y Tests)
 make
+sudo make install
 ```
 
-## 2. Iniciar el Gestor (Daemon)
+After installing, you can use `toaddX-cli` from anywhere in your system.
 
-El daemon debe iniciarse una sola vez. Se ejecutará en segundo plano y sobrevivirá incluso si cierras la terminal.
+## Usage
 
 ```bash
-./toaddX
+# Start a process
+toaddX-cli start /path/to/binary
+
+# List all managed processes
+toaddX-cli ps
+
+# Detailed process info
+toaddX-cli status <iid>
+
+# Stop a process (SIGTERM)
+toaddX-cli stop <iid>
+
+# Kill a process and all its descendants (SIGKILL)
+toaddX-cli kill <iid>
+
+# List zombie processes
+toaddX-cli zombie
 ```
-*Verás el logo ASCII del sapo 🐸 confirmando que el proceso se ha iniciado y se ha movido al background.*
 
-## 3. Comandos Principales (CLI)
+> **Note:** The daemon starts automatically when you run any command.
+> You can also start it manually with `toaddX`.
 
-Ahora puedes interactuar con el gestor usando `toaddX-cli`.
+## Configuration
 
-| Acción | Comando |
-| :--- | :--- |
-| **Iniciar un programa** | `./toaddX-cli start ./tests/infinite_loop` |
-| **Listar procesos** | `./toaddX-cli ps` |
-| **Ver estado detallado** | `./toaddX-cli status [IID]` |
-| **Detener proceso (SIGTERM)** | `./toaddX-cli stop [IID]` |
-| **Matar proceso y descendientes** | `./toaddX-cli kill [IID]` |
-| **Ver procesos Zombie** | `./toaddX-cli zombie` |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TOADDX_MAX_RESTARTS` | `5` | Max consecutive auto-restarts before marking a process as FAILED |
 
-## 4. Pruebas de Funcionamiento
-
-### Probar Auto-Restart (Bonus)
-El sistema reiniciará automáticamente cualquier proceso que muera de forma inesperada (hasta 5 veces por defecto).
 ```bash
-# Iniciar el programa que crashea
-./toaddX-cli start ./tests/crasher
-
-# Observar cómo aumentan los RESTARTS
-./toaddX-cli status [IID]
+export TOADDX_MAX_RESTARTS=10
+toaddX   # restart daemon to apply
 ```
 
-### Monitorear Logs
-Si quieres ver qué está pasando "bajo el capó", puedes revisar el archivo de log del daemon:
+## Process States
+
+| State | Meaning |
+|-------|---------|
+| `RUNNING` | Process is executing |
+| `STOPPED` | Process was explicitly stopped via `stop` or `kill` |
+| `ZOMBIE` | Process terminated but exit status not yet collected |
+| `FAILED` | Process crashed more than N consecutive times (bonus) |
+
+## Logs
+
 ```bash
 tail -f /tmp/toaddx.log
 ```
 
-## 5. Mantenimiento y Limpieza
+## Uninstall
 
-- **Detener el Daemon:** `pkill toaddX`
-- **Limpiar archivos compilados:** `make clean`
-- **Configurar intentos de reinicio:** `export TOADDX_MAX_RESTARTS=10` (antes de iniciar `./toaddX`)
+```bash
+sudo make uninstall
+make clean
+```
