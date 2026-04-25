@@ -9,7 +9,7 @@
  * Compile: gcc -Wall -Wextra -std=c17 -o toaddX toaddX.c
  */
 
-#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -485,7 +485,7 @@ int main(void) {
             req_fd = open(FIFO_REQ, O_RDONLY | O_NONBLOCK);
             if (req_fd < 0) {
                 log_msg("ERROR: open(%s): %s", FIFO_REQ, strerror(errno));
-                usleep(500000);
+                sleep(1);
                 continue;
             }
         }

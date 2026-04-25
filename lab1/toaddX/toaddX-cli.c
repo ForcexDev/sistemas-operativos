@@ -8,7 +8,7 @@
  * Compile: gcc -Wall -Wextra -std=c17 -o toaddX-cli toaddX-cli.c
  */
 
-#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
