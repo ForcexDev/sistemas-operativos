@@ -453,7 +453,12 @@ static void setup_signals(void) {
 
 int main(void) {
     /* Print banner before daemonizing */
-    printf("%s", TOADDX_ASCII);
+    /* Try toilet for the cool banner, fall back to static art */
+    int ret = system("toilet -t -f mono12 'toaddX' -F metal 2>/dev/null");
+    if (ret != 0) {
+        printf("%s", TOADDX_FALLBACK);
+    }
+    printf("\n  \033[38;5;245mProcess Manager v1.0\033[0m\n");
     printf("  \033[38;5;245mStarting daemon...\033[0m\n\n");
     fflush(stdout);
 
