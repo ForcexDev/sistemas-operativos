@@ -109,14 +109,6 @@ $ toaddX-cli zombie
 IID    PID      STATE      UPTIME     BINARY
 5      16001    ZOMBIE     00:00:03   /home/user/tarea_corta
 ```
----
-
-## 🗑️ Desinstalación
-
-```bash
-sudo make uninstall    # Eliminar de /usr/local/bin
-make clean             # Limpiar binarios y FIFOs
-```
 
 ---
 
@@ -149,7 +141,17 @@ make clean             # Limpiar binarios y FIFOs
                        ┌──────────┐
                        │  FAILED  │
                        └──────────┘
-``
+```
+
+---
+
+## 📝 Arquitectura
+
+- **IPC:** Dos FIFOs en `/tmp/` (request y response) con structs de tamaño fijo
+- **Daemonización:** Double fork + `setsid()` + redirigir fds a `/dev/null`
+- **Señales:** `SIGCHLD` con handler async-signal-safe + `waitpid(WNOHANG)` en loop principal
+- **Kill descendants:** Process groups (`setpgid` + `kill(-pgid, SIGKILL)`)
+- **Bonus:** Auto-restart con mismo IID, contador de restarts, estado FAILED tras N muertes
 
 ---
 
@@ -228,16 +230,15 @@ lab1/toaddX/
 ├── README.md         # Este archivo
 └── tests/
     ├── infinite_loop.c   # Loop infinito (probar ps, stop, kill)
-    ├── short_task.c      # Termina en 2s (probar auto-restart)
+    ├── short_task.c      # Termina en 2s (probar zombie)
     └── crasher.c         # Crash cada 1s (probar FAILED)
 ```
 
 ---
 
-## 📝 Arquitectura
+## 🗑️ Desinstalación
 
-- **IPC:** Dos FIFOs en `/tmp/` (request y response) con structs de tamaño fijo
-- **Daemonización:** Double fork + `setsid()` + redirigir fds a `/dev/null`
-- **Señales:** `SIGCHLD` con handler async-signal-safe + `waitpid(WNOHANG)` en loop principal
-- **Kill descendants:** Process groups (`setpgid` + `kill(-pgid, SIGKILL)`)
-- **Bonus:** Auto-restart con mismo IID, contador de restarts, estado FAILED tras N muertes
+```bash
+sudo make uninstall    # Eliminar de /usr/local/bin
+make clean             # Limpiar binarios y FIFOs
+```
