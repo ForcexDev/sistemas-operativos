@@ -3,7 +3,7 @@
 **toaddX** es un gestor de procesos tipo daemon para Linux. Ejecuta, monitorea y controla procesos desde la línea de comandos, con auto-restart automático ante crashes inesperados.
 
 > **Tarea 1 — Sistemas Operativos**
-> Procesos y Syscalls | C17 | Sin threads | IPC via FIFOs
+> Procesos y Syscalls
 
 ---
 
@@ -109,6 +109,14 @@ $ toaddX-cli zombie
 IID    PID      STATE      UPTIME     BINARY
 5      16001    ZOMBIE     00:00:03   /home/user/tarea_corta
 ```
+---
+
+## 🗑️ Desinstalación
+
+```bash
+sudo make uninstall    # Eliminar de /usr/local/bin
+make clean             # Limpiar binarios y FIFOs
+```
 
 ---
 
@@ -141,177 +149,71 @@ IID    PID      STATE      UPTIME     BINARY
                        ┌──────────┐
                        │  FAILED  │
                        └──────────┘
-```
+``
 
 ---
 
-## 🧪 Ejemplo de Flujo Completo
+## 🧠 Decisiones de Diseño
 
-A continuación se muestra un flujo de uso completo con los resultados esperados.
-
-### 1. Compilar e instalar
-
-```bash
-$ cd sistemas-operativos/lab1/toaddX
-$ make
-  CC  toaddX.c
-  CC  toaddX-cli.c
-  CC  tests/*
-
-  ████████╗ ██████╗  █████╗ ██████╗ ██████╗ ██╗  ██╗
-  (banner metálico de toilet)
-
-  Process Manager v1.0
-  Build successful
-
-  ✓ toaddX        — Daemon
-  ✓ toaddX-cli    — CLI
-  ✓ test programs — infinite_loop, short_task, crasher
-
-$ sudo make install
-  INSTALL  /usr/local/bin/toaddX
-  INSTALL  /usr/local/bin/toaddX-cli
-  ✓ Installed! You can now use toaddX-cli from anywhere.
-```
-
-### 2. Iniciar un proceso (el daemon se auto-inicia)
-
-```bash
-$ toaddX-cli start tests/infinite_loop
-⚡ Daemon not running. Starting toaddX...
-  (banner de toaddX)
-✓ Daemon started successfully.
-
-IID: 2
-```
-
-### 3. Verificar que está corriendo
-
-```bash
-$ toaddX-cli ps
-IID    PID      STATE      UPTIME     BINARY
-2      14203    RUNNING    00:00:05   /home/user/.../tests/infinite_loop
-```
-
-### 4. Ver status detallado
-
-```bash
-$ toaddX-cli status 2
-IID:      2
-PID:      14203
-BINARY:   /home/user/.../tests/infinite_loop
-STATE:    RUNNING
-UPTIME:   00:00:12
-RESTARTS: 0
-```
-
-### 5. Detener el proceso (SIGTERM)
-
-```bash
-$ toaddX-cli stop 2
-Process IID 2 (PID 14203) sent SIGTERM.
-
-$ toaddX-cli ps
-IID    PID      STATE      UPTIME     BINARY
-2      14203    STOPPED    00:00:30   /home/user/.../tests/infinite_loop
-```
-
-### 6. Iniciar un segundo proceso
-
-```bash
-$ toaddX-cli start tests/infinite_loop
-IID: 3
-
-$ toaddX-cli ps
-IID    PID      STATE      UPTIME     BINARY
-2      14203    STOPPED    00:01:00   /home/user/.../tests/infinite_loop
-3      15002    RUNNING    00:00:03   /home/user/.../tests/infinite_loop
-```
-
-> **Nota:** Los IIDs son secuenciales y nunca se reutilizan. IID 1 está reservado para toaddX.
-
-### 7. Matar proceso + descendientes (SIGKILL)
-
-```bash
-$ toaddX-cli kill 3
-Process IID 3 (PID 15002) and descendants killed.
-
-$ toaddX-cli ps
-IID    PID      STATE      UPTIME     BINARY
-2      14203    STOPPED    00:01:30   /home/user/.../tests/infinite_loop
-3      15002    STOPPED    00:00:15   /home/user/.../tests/infinite_loop
-```
-
-### 8. Probar auto-restart (Bonus)
-
-El programa `crasher` se termina inesperadamente cada 1 segundo. toaddX lo reinicia automáticamente hasta 5 veces:
-
-```bash
-$ toaddX-cli start tests/crasher
-IID: 4
-
-# Después de ~3 segundos:
-$ toaddX-cli status 4
-IID:      4
-PID:      15500
-BINARY:   /home/user/.../tests/crasher
-STATE:    RUNNING
-UPTIME:   00:00:01
-RESTARTS: 2
-
-# Después de ~10 segundos (superó los 5 restarts):
-$ toaddX-cli status 4
-IID:      4
-PID:      15800
-BINARY:   /home/user/.../tests/crasher
-STATE:    FAILED
-UPTIME:   00:00:01
-RESTARTS: 6
-```
-
-### 9. Verificar que el daemon sobrevive al cierre del terminal
-
-```bash
-# Cerrar la terminal completamente, abrir una nueva:
-$ toaddX-cli ps
-IID    PID      STATE      UPTIME     BINARY
-2      14203    STOPPED    00:05:00   /home/user/.../tests/infinite_loop
-3      15002    STOPPED    00:04:00   /home/user/.../tests/infinite_loop
-4      15800    FAILED     00:03:30   /home/user/.../tests/crasher
-```
-
-> El daemon sigue corriendo. Esto es porque se daemoniza con double fork + `setsid()`.
-
-### 10. Ver los logs del daemon
-
-```bash
-$ tail /tmp/toaddx.log
-[2026-04-24 22:00:00] toaddX daemon started (PID 13500, max_restarts=5)
-[2026-04-24 22:00:00] FIFOs created: /tmp/toaddx_req, /tmp/toaddx_res
-[2026-04-24 22:00:01] START iid=2 pid=14203 bin=/.../infinite_loop
-[2026-04-24 22:00:30] STOP iid=2 pid=14203
-[2026-04-24 22:00:30] REAP pid=14203 iid=2 explicit=1 exit_status=0
-[2026-04-24 22:01:00] START iid=4 pid=15300 bin=/.../crasher
-[2026-04-24 22:01:01] REAP pid=15300 iid=4 explicit=0 exit_status=-1
-[2026-04-24 22:01:01] RESTART iid=4 attempt=1/5 bin=/.../crasher
-[2026-04-24 22:01:02] RESTART iid=4 attempt=2/5 bin=/.../crasher
-...
-[2026-04-24 22:01:06] FAILED iid=4 after 6 restarts
-```
+| Decisión | Por qué |
+|----------|---------|
+| `poll()` en vez de `read()` bloqueante | Permite verificar `SIGCHLD` (hijos muertos) entre peticiones. Un `read()` bloqueante dejaría al daemon congelado sin poder recoger hijos |
+| `waitpid(-1, ..., WNOHANG)` | Recoge hijos muertos sin bloquearse. `WNOHANG` retorna inmediatamente si no hay hijos que recoger, permitiendo volver al loop |
+| `setpgid(0, 0)` en cada hijo | Aísla cada proceso en su propio grupo. Así `kill(-pgid, SIGKILL)` mata al proceso Y a todos sus descendientes sin afectar al daemon |
+| Double fork para daemonizar | El primer `fork()` + `setsid()` crea una nueva sesión. El segundo `fork()` previene que el proceso pueda re-adquirir una terminal de control |
+| FIFOs con structs de tamaño fijo | Evita problemas de parsing de texto. Se envía `sizeof(struct request)` bytes exactos y se lee esa misma cantidad |
+| `volatile sig_atomic_t` para la bandera | Tipo garantizado por el estándar C como seguro para acceso desde un signal handler. Usar `int` normal podría causar bugs de optimización |
+| `_exit(127)` en vez de `exit(127)` | `_exit` termina sin ejecutar handlers de `atexit` ni hacer flush de buffers. En un hijo post-fork esto es importante para no duplicar side effects del padre |
+| `SA_RESTART` en `sigaction` | Hace que las syscalls interrumpidas por `SIGCHLD` (como `poll`) se reinicien automáticamente en vez de fallar con `EINTR` |
+| `SA_NOCLDSTOP` en `sigaction` | Evita recibir `SIGCHLD` cuando un hijo es detenido con `SIGSTOP` (solo nos interesa cuando muere) |
 
 ---
 
-## ⚙️ Configuración
+## 📡 Diagrama de Comunicación IPC
 
-| Variable | Default | Descripción |
-|----------|---------|-------------|
-| `TOADDX_MAX_RESTARTS` | `5` | Máximo de auto-restarts consecutivos antes de marcar como FAILED |
-
-```bash
-export TOADDX_MAX_RESTARTS=10
-pkill toaddX           # Detener daemon actual
-toaddX                 # Reiniciar con nueva configuración
 ```
+              toaddX-cli                              toaddX (daemon)
+           ┌──────────────┐                      ┌──────────────────┐
+           │ 1. Parsear   │                      │                  │
+           │    comando   │                      │  poll() esperando│
+           │              │                      │  en FIFO_REQ     │
+           │ 2. Escribir  │   struct request     │                  │
+           │    request ──│─────── FIFO ────────►│ 3. Leer request  │
+           │              │  /tmp/toaddx_req     │    y procesar    │
+           │              │                      │    (handle_*)    │
+           │ 4. Leer      │   struct response    │                  │
+           │    response◄─│─────── FIFO ─────────│ 4. Escribir      │
+           │              │  /tmp/toaddx_res     │    response      │
+           │ 5. Imprimir  │                      │                  │
+           └──────────────┘                      └──────────────────┘
+```
+
+**Nota:** La comunicación es sincrónica — el CLI se bloquea esperando la respuesta. Las escrituras son atómicas porque `sizeof(struct request)` < `PIPE_BUF` (4096 bytes en Linux).
+
+---
+
+## ❓ Preguntas Frecuentes
+
+**¿Por qué no usan threads?**
+> El modelo con `poll()` + señales es la forma clásica de manejar concurrencia en daemons Unix de un solo hilo.
+
+**¿Qué pasa si el daemon muere?**
+> Los FIFOs quedan huérfanos en `/tmp/`. El CLI detectará que no puede abrir el FIFO (el `open()` con `O_NONBLOCK` falla con `ENXIO`) y ofrecerá reiniciar el daemon automáticamente.
+
+**¿Qué pasa si dos CLIs envían comandos simultáneamente?**
+> Las escrituras menores a `PIPE_BUF` (4096 bytes) son atómicas en Linux, por lo que no hay corrupción de datos. Sin embargo, el daemon procesa secuencialmente, así que uno esperará al otro.
+
+**¿Por qué `setpgid` se llama tanto en el hijo como en el padre?**
+> Race condition: si el padre llama `kill(-pgid)` antes de que el hijo haya ejecutado su `setpgid`, el kill fallaría. Al llamarlo en ambos, se garantiza que el grupo está configurado antes de cualquier uso.
+
+**¿Qué significa `_exit(127)` en vez de `exit(127)`?**
+> `_exit` termina el proceso sin ejecutar handlers de `atexit()` ni hacer flush de buffers de `stdio`. En un hijo post-`fork()`, usar `exit()` podría duplicar la salida del padre si hay buffers pendientes.
+
+**¿Por qué se usa `volatile sig_atomic_t` para `got_sigchld`?**
+> El compilador podría optimizar la lectura de una variable global y no volver a leerla del memory. `volatile` fuerza a leerla cada vez. `sig_atomic_t` garantiza que la escritura desde el handler sea atómica.
+
+**¿Cómo funciona el auto-restart (bonus)?**
+> Cuando un hijo muere sin que el usuario haya ejecutado `stop` o `kill` (`was_explicit_stop == 0`), `handle_unexpected_death()` incrementa un contador y relanza el binario con `fork+exec`, conservando el mismo IID. Si supera N reintentos, lo marca como FAILED.
 
 ---
 
@@ -328,15 +230,6 @@ lab1/toaddX/
     ├── infinite_loop.c   # Loop infinito (probar ps, stop, kill)
     ├── short_task.c      # Termina en 2s (probar auto-restart)
     └── crasher.c         # Crash cada 1s (probar FAILED)
-```
-
----
-
-## 🗑️ Desinstalación
-
-```bash
-sudo make uninstall    # Eliminar de /usr/local/bin
-make clean             # Limpiar binarios y FIFOs
 ```
 
 ---
